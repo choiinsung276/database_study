@@ -1,0 +1,160 @@
+1. 제품의 종류: oracle, ms-sql server, db2, informix,mysql
+2. 연결 방식
+	1) 로컬 dbms : access, sqlite
+	2) 네트워크 DBMS : 서버용, 클라이언트용
+3. 데이터의 저장 형태
+	1)계층형 DB : Tree
+	2)네트워크형 DB : Graph
+	3)관계형 DB: Table
+	4)객체지향형DB : Object
+	5)객체지향형DB
+4. 정형화
+	1)정형화 데이터베이스 :관계형 DB
+	2)비정형화 데이터베이스 : NoSQL
+	
+5.mysql
+	1)클라이언트 프로그램
+		-기본 프로그램(콘솔용) : mysql.exe
+			mysql -u 아이디 -p패스워드
+			mysql -h아이피주소 -u아이디 -p패스워드
+			mysql -uroot -p1111
+			mysql -uroot -p
+			mysql -h127.0.0.1 -uroot -p (가상의 내아이피 주소)
+	2) GUI용 프로그램
+		+ WorkBench
+		+ Heidi
+		
+	(2) 접속
+	1) 기본명령어
+		show databases;
+		use 데이터베이스명;
+		show 테이블명;
+		desc 테이블명;
+	2) 사용자 추가
+		-user1 사용자 추가
+		-자기이름으로 db생성
+		create database 이름명;
+	3) 실습준비
+	- scott.sql을 이용해서 db생성 (scott.sql이 있는 파일 위치에서cmd)
+	mysql -uroot -p < scott.sql
+	drop database testdb
+	< 오른쪽파일을 sql 에 넣겠다는뜻
+	
+	이미 접속이 되있는상황에서 쓰는 명령어
+	- source 경로/파일명.sql
+	
+	sakila, world db를 백업(mysqldump.exe가 백업진행)
+	백업파일을 저장할 위치에서 cmd
+	mysqldump -uroot -p sakila > sakila.sql
+	mysqldump -uroot -p sakila > world.sql
+		(밖으로 보내겠다는 뜻으로 > )
+		
+6.SQL
+	Structured Query Language 비절차적,구조화된 언어
+	1. DLL Data Definition Language 
+	- 객체(테이블,뷰,인덱스,등)를 생성(create), 수정(Alter), 삭제(Drop)
+	 -CREATE:
+	 -ALTER
+	 -DROP
+	2. DML(Data Manipulation Language) 실제 데이터
+	 -INSERT : 
+	 -UPDATE
+	 -DELETE
+	3. QL(Query Language) *요즘은따로 분류해놈
+	 - SELECT
+	4.DCL (관리자)
+		보안, 트랜젝션, 인증, 백업, 복원 
+	 - GRANT(권한부여, REVOKE(권한 해제))
+	 *ANSI SQL(표준 SQL)
+	 *Oracle : PL-SQL
+	 *MS-SQL server : T-SQL
+	 
+7. SELECT
+	열(Column, field, 속성) field name , 
+	행(record,tuple) 
+	필드 < 레코드(메모리) < 테이플 (파일)
+	
+(1) 기본문법
+	SELECT 필드명,필드명,..FROM 테이블명;
+	SELECT * FROM 테이블명;
+	
+SHOW DATABASES;
+USE testdb;
+SHOW TABLES;
+DESC emp; // 사원표 employee
+// empno 사원번호, job 직무,업무 MGR 매니저(직속상사)
+// HIREDATE 입사일자 SAL 급여 comm 커미션 보넛
+select ename, mgr,job,sal,comm FROM emp;
+// SELECT [OPTION] columns FROM table [WHERE 절];
+option - all(중복포함), distinct(중복제거)
+
+1)필드 가공 처리
+	필드에 다양한 연산 가능
+	SELECT empno, ename, sal, sal+100 FROM emp;
+2)필드의 alias 처리
+	as로 별칭 가능 또는 as 없이 한칸띄고 가능
+	공백을 주고싶으면 '이름 이름'
+	SELECT empno, ename, sal, sal+100 as 증가된급여 FROM emp;
+	SELECT empno, ename, sal, sal+100 증가된급여 FROM emp;
+3)중복 제거 : distinct
+	SELECT distinct job FROM emp;
+	
+1) 정령 기능
+	ORDER BY 필드명[,필드명, ,,] [ASC | DESC]
+	// 급여가 많은 순으로 이름, 급여, 부서코드를 조회
+	SELECT name, sal, deptno FROM emp;
+	SELECT name, sal, deptno FROM emp ORDER BY sal DESC;
+	// 부서별로 급여가 적은 순으로 이름, 급여, 부서코드 조회
+	SELECT ename, sal, deptno FROM emp ORDER BY deptno DESC, sal ASC;
+2) 조건 기능(레코드 필터링)
+	WHERE 필드명 조건식 
+	// 급여가 3천달러 이상인 직원의 사번, 이름, 업무, 급여를 조회
+	SELECT empno,ename,job,sal FROM emp WHERE sal >= 3000; 
+	//업무가 manager 인 직원의 이름, 업무, 급여를 조회
+	SELECT ename,job,sal FROM emp WHERE job ='manager';
+	//부서가 20이고 업무가 analyst 인 직원의 이름, 부서, 업무, 급여를 조회
+	SELECT ename,deptno,job,sal FROM emp WHERE deptno=20 and job=analyst;
+	// 급여가 1500이상 2500이하를 받는 직원의 이름,부서,업무,급여를 조회
+	SELECT ename,deptno,job,sal FROM emp WHERE sal >=1500 and sal<=2500;
+	WHERE sal BETWEEN 1500 AND 2500
+	// 업무가 clerk, salesman, analyst인 직원의 이름,부서,업무,급여를 조회
+	SELECT ename,deptno,job,sal from emp
+	WHERE job = 'clerk' or job='salesman' or job ='analyst';
+	WHERE job IN ('clerk','salesman','analyst')
+	// 1982년 1월 1일 이후에 입사한 직원의 이름, 업무, 입사일자 조회
+	SELECT ename, job, HIREDATE from emp WHERE HIREDATE > '82/01/01';
+	또는 '1982-1-1'
+	커미션이 없는 직원의 이름, 부서, 업무, 급여, 커미션을 조회
+	select ename, deptno, job, sal, comm from emp Where comm is NULL;
+	is null , is not null 
+	WHERE job!= 'salesman';
+	like 연산자
+	%:0개 이상의 문자
+	_: 1개의 문자대체
+	
+	// 이름이 s로 시작하는 직원의 이름, 업무, 급여를 조회
+	SELECT ename,job,sal FROM emp WHERE ename like 's%';
+	3) GROUP BY 필드명[,필드명,...]
+		//부서별로 급여 평균avg(), 최저min() 급여를 조회
+	SELECT avg(sal), nim(sal) FROM emp GROUP BY deptno;
+	//부서별로 급여 평균, 최저 급여조회(단, 급여 평균이 높을 순으로)
+	SELECT avg(sal), min(sal)FROM emp GROUP BY deptno ORDER BY avg(sal) DESC;
+**FROM 1 GROUP 2 SELECT 3 ORDER 4
+	//전체 급여의 합계가 5000을 초과하는 업무에 대해서 급여 합계를 조회
+	group by 의 특별한 조건문 = having
+	SELECT job,sum(sal) from emp group by job having sum(sal)>5000;
+	// 전체 급여의 합계가 5000을 초과하는 업무에 대해서 급여 합계를 조회(salesman제외)
+	select job,sum(sal) FROM emp group by job having sum(sal)>5000 AND job!='salesman';
+FROM 1 GROUP HAVING 2 SELECT3
+	SELECT job,sum(sal) FROM emp WHERE job!='salesman'GROUP BY job HAVING sum(sal) >5000;
+FROM 1 WHERE 2 GROUP 3 SELECT4
+
+
+select job,sum(sal) FROM emp group by job having sum(sal)>5000 AND job!='salesman';
+select ename,job,hiredate from emp where hiredate > '1981-1-1' and hiredate<'1982-1-1';
+select ename,job,sal,hiredate from emp where empno in (7902,7788,7566);
+select ename,job,sal,deptno from emp where job not in ('manager','clerk','analyst');
+select ename,sal,job,deptno from emp where job in('president','salesman') and sal>1500;
+select ename,deptno,job,hiredate from emp where hiredate>'1987-01-01';
+select ename from emp group by deptno having emp.job = emp.job;
+select ename from emp where comm>=sal*1.1 ORDER BY sal;

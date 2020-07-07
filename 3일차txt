@@ -1,0 +1,197 @@
+9.Sub Query(상관 질의)
+(1) 다른 query 문에 포함된 query문 
+(2) 서브쿼리 반드시 ()묶어서 해야함
+(3) 연산자의 오른쪽에서 사용
+(4) 서브쿼리먼저 실행된다 !!
+(5) ORDER BY를 안쪽 쿼리문에 쓸수 없다. 
+(6) 연산자
+	1)단일행 연산자 
+	2)다중행 연산자 : IN, ANY, ALL 
+		- in : or와 같다 , any : 하나만 참이여도 참(크다 작다) , ALL : and와같은 연산자
+		
+	(예제) 업무별로 최소급여보다 많이 받는 직원의 사번, 이름, 부서코드를 조회
+		각각의 업무별 최소급여 5개 중에 하나보다 높으면됨
+	
+	SELECT empno, ename, deptno FROM emp 
+		WHERE sal > 3000 or sal > 800 ....
+	이것은 안된다! > 는 단일행 연산자라서
+	SELECT empno, ename, deptno FROM emp
+		WHERE sal >(3000,800,2450,5000,1250);
+	(정답)
+	SELECT empno, ename, deptno FROM emp
+		WHERE sal > ANY(SELECT min(sal) FROM emp group by job);
+		
+	(예제) 업무별 최대급여보다 같거나 많이 받는 직원의 사번, 이름, 부서코드를 조회
+		최대 급여라서 각 업무별로 sal 들을 다 만족 해야되는 and 연산으로 1:n 대응이라 다중행 연산자
+	SELECT empno, ename, deptno FROM emp
+		WHERE sal >= ALL(SELECT max(sal) FROM emp group by job);
+		
+	//다중열 비교(열을 묶어주는것 ,지금까지 행을 묶었음)
+	SELECT sal, comm FROM emp WHERE ename = 'miller'; --1300,null 값인대 예제를 위해 바꿈
+	 
+	-- miller의 급여는 1500, comm  은 300으로 수정
+	UPDATE emp
+	SET sal = 1500, comm = 300
+	WHERE ename = 'miller';
+	(예제) 급여와 커미션이 30번 부서에 있는 직원의 급여와 커미션이 같은 직원에 대해 사번, 이름, 
+	부서번호, 급여, 커미션을 조회
+	
+	SELECT empno, ename, deptno, sal, comm FROM emp
+		WHERE sal IN(SELECT sal FROM emp WHERE deptno =30) AND
+			comm IN (SELECT comm FROM emp WHERE deptno = 30);
+	급여같은사람 따로 커미션같은 사람 따로 비교한 결과가 나옴 (각각의 열을 따로 처리해서그럼)
+	급여와 커미션이 동시에 같은 사람 비교해야되는데 안나옴
+	(정답) comm이 null인경우는 연산안함
+	SELECT empno, ename, deptno, sal, comm FROM emp
+		WHERE (sal, comm) IN (SELECT sal,comm FROM emp WHERE deptno =30);
+	(정답) comm이 null도 포함하려면 coalesce(comm,0) 
+	SELECT empno, ename, deptno, sal, comm FROM emp
+		WHERE (sal, coalesce(comm,0)) IN (SELECT sal,coalesce(comm,0) FROM emp WHERE deptno =30);
+		
+	(*) 특벽한 형태의 Subquery
+	SELECT * FROM emp WHERE deptno = 30;
+	SELECT * FROM (SELECT * FROM emp WHERE deptno = 30) as t;
+	보통 조건문에 쓰이는데 테이블로 조건문 사용할경우 별칭으로 테이블이름 쓰기.
+	
+	INSERT 에서 subquery 사용한예제
+	INSERT INTO tbltest(id, name) SELECT empno, ename FROM emp;
+	INSERT INTO tbltest(id, name) SELECT empno, ename FROM emp limit 5;
+	limit  은 mysql에서만 
+	
+	//상관 서브 쿼리
+	 (예제) 적어도 한명의 직원으로부터 보고를 받을 수 있는 직원의 이름, 업무, 입사일자, 부서번호를 조회
+	 SELECT ename, job, hiredate, deptno FROM emp Where empno IN 
+	 (SELECT MGR FROM emp GROUP BY MGR );
+	(정답) 상관서브쿼리
+	SELECT ename, job, hiredate, deptno FROM emp as e1
+		WHERE exists(SELECT * FROM emp as e2 WHERE e1.empno  = e2.mgr);
+	바깥쪽 SELECT가 먼저 실행되고 서브쿼리가 실행됨 e1테이블 먼저 생성되고 e2테이블 생성됨
+		e1의 사번으로 e2테이블에서 mgr과 비교하여 e1에서 데이터가 나옴
+	총 3번ㅏ
+	(정답 ) 일반 서브쿼리
+	SELECT ename, job, hiredate, deptno FROM emp Where empno IN 
+	 (SELECT distinct MGR FROM emp );
+	 
+10. JOIN 
+	(1) 여러 개의 테이블을 병합하여 하나의 결과를 도출하기 위한 방법
+	(2) 종류
+		1) Cartesian Product Join(데카르트 곱)
+		SELECT a.id, a.value,b.id,b.value
+		FROM tblA a, tblB b;
+		2) Equi Join
+			- 공통 필드의 레코드를 가져오는 방법( 중복)
+			-INNER JOIN (중복x)
+		3) OUTER JOIN
+			-INNER JOIN 확장
+				INNER JOIN + 공통되지 않은 레코드까지 추출
+				LEFT OUTER JOIN
+				RIGHT OUTER JOIN
+				FULL OUTER JOIN (mysql 지원x)
+				4) None eqip qksghtoro
+					공통되지 않는 필드의 레코드를 가져오는 방법
+	3) 실습 
+	CREATE TABLE tblA(
+	id int,
+	value int
+	); ....
+	
+	INSERT INTO tblA VALUES(1,10);
+	...
+	
+	//INNER JOIN
+	SELECT 문에 가져올거는 A,b테이블 아무거나 가능
+		SELECT tblA.id, tblB.value FROM tblA INNER JOIN tblB ON tblA.id = tblB.id;
+	
+	SELECT a.id, a.value, b.id, b.value
+	FROM tblA a INNER JOIN tblB b ON a.id = b.id;
+	
+	SELECT a.id a.value, b.id, b.value
+	FROM tblA a, tblB b WHERE a.id = b.id;
+
+	(예제) 직원의 사번, 이름, 업무, 부서번호, 부서명을 조회
+	select emp.deptno,dname,empno,ename,job from emp
+	inner join dept on emp.deptno = dept.deptno;
+	(예제) salesman의 업무를 수행하는 직원의 사번, 이름, 업무, 부서번호, 부서명을 조회
+	정답 : SELECT empno, ename, job, emp.deptno, dname FROM emp JOIN dept
+	ON emp.deptno = dept.deptno WHERE job = 'salesman';
+	(예제) Newyork에서 근무하는 직원의 사번, 이름, 업무, 부서명 조회
+	select emp.deptno,dname,loc,empno,ename,job from emp 
+	inner join dept on emp.deptno = dept.deptno where loc='new york'
+	OUTER JOIN 
+	a 1,2,3,5,7  b 1,2,4,5,8   공통은 125 왼쪽추가3,7, 또는 오른쪽추가 4,8
+	SELECT a.id,a.value, b.id, b.value
+	FROM tblA a LEFT OUTER JOIN tblB b ON a.id = b.id;
+	
+	(예제) 직원들의 이름, 급여, 부서명, 근무지를 조회.단,부서명과 근무지는 모두 출력할 수 있도록 조회
+	SELECT a.ename, a.sal, a.deptno, b.Loc FROM emp a LEFT OUTER JOIN dept b ON a.deptno=b.deptno
+	
+	(4) Non Equi Join 공통점이없는데 join 사용한 경우
+	(예제)
+	직원들의 사번, 이름, 업무, 급여, 급여등급 조회
+	(정답)
+	SELECT empno, ename, job, sal, grade FROM emp INNER JOIN salgrade
+	ON emp.sal >= salgrade.losal AND emp.sal <= salgrade.hisal;
+	
+	select empno,ename,job,sal,grade, losal, hisal from
+emp inner join salgrade on emp.sal between losal and hisal;
+	
+	5)SELF JOIN 
+		- 서로 같은 테이블을 복제하여 조인
+		- 반드시 셀 
+	(예제)
+	직원의 사번, 이름, 업무, 관리자, 관리자이름을 조회
+	
+	
+	3개의 테이블 조인 
+	SELECT tblA.id, tblB.value, tblC.value FROM tblA INNER JOIN tblB ON 
+		tblA.id = tblB.id INNER JOIN tblC ON tblB.id = tblC.id;
+	비표준
+	SELECT tblA.id, tblB.value, tblC.value 
+		FROM tblA,tblB,tblC
+		WHERE tblA.id=tblB.id AND tblB.id = tblC.id;
+		
+11.데이터 무결성(Data Integrity)
+ (1) WHAT? 3대원칙
+	1) 실체 (Entity) 무결성 : 데이터의중복
+		primary Key, Unique <<제약(Constraint)
+	2) 영역 (Domain) 무결성
+		check(mysql에서는 지원x)
+	3) 참조 (Reference) 무결성 
+		Foreign Key
+ (2) 컬럼의 속성
+	-NN속성(NOT NULL)
+		Primary Key 는 not null 속성임
+	-ND속성(NO Duplicate) 중복안됨
+		Primary Key
+		Unique
+	-NC속성(No Change)
+		Foreign Key (재대로된 정보인지 다른 참조당하는 테이블한태 확인할수있는)
+		참조하는 = 자식테이블 , 참조당하는 = 부모테이블 
+(3) 실습
+	CREATE TABLE tblExam(
+		id int,  --null 이 생략되있음
+		name varchar(10)
+		)default charset = utf8;
+		
+		1) Primary Key
+			-NN속성과 ND속성
+			-한 테이블에 한개만 사용가능
+			-여러 개의 컬럼을 하나로 묶을 수 있다.(속성여러개로 기본키로 가능)
+		(중복 안되는 예제) ND
+		INSERT INTO tblExam values(1,'홍길동');
+		INSERT INTO tblExam values(1,'홍길동');
+		(기본키 추가하는 예제)
+		ALTER TABLE tblExam ADD Constraint pk_id Primary Key (id) ;
+		DELETE FROM tblExam;
+		(not null ) NN
+		INSERT INTO tblexam(name) VALUES('임꺽정');
+		
+	sql 활용 책 35page 
+	DD
+		show tables;
+		show databases;
+		show processlist;
+		
+		desc information_schema.table_constraints;
+		select table_name, constraint_name, constraint_type FROM information_schema.table_constraints;
+		키들하고 제약어떻게 되있는지 어떤테이블에 

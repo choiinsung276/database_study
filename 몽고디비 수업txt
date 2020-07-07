@@ -1,0 +1,211 @@
+19. MongoDB
+(1) 서버실행
+	1) mongod.exe : C:\data\db 폴더 준비
+	2) 원하는 위치에 db생성
+		- 임의의 폴더 준비 : C:\mongowork\server1
+		-mongod --dbpath "C:\mongowork\server1"
+		
+		2)use db명 -db와 연결, db생성
+		3) show collections
+		4)db : 현재 db를 조회
+		5)db.dropDatabase(): DB삭제
+		
+4) collection 생성,삭제
+	db.createCollection("이름"[,옵션])
+		-옵션ㅇ 관련된 도큐먼트
+		https://docs.mongodb.com/manual/reference/method/db.createCollection/index.html
+		-capped: boolean (공간이 늘어나는걸 방지)
+			이 값을 true로 설정하면 capped collection을 활성화시킨다
+			capped collection이란 고정된 크기를 가진 컬렉션으로 size가 초과되면
+			가장 오래된 데이터를 덮어쓴다.
+			이값을 true로 설정하면 반드시 size옵션도 설정해야한다.
+			* 업데이트나 딜리트 안됨
+		- size : number(바이트 단위)
+			capped collection을 위해 해당 컬렉션의 최대 크기를 byte로 지정
+		
+		- max : number(도큐먼트의 개수)
+			해당 컬렉션에 추가 될 수 있는 최대 갯수
+			
+	
+			
+	db.컬렉션명.drop()
+		(예제) db.books.drop()
+	
+*JSON 
+javascript Object Notation 거의 표준 데이터 형식으로 됨
+키와 값으로 이루어짐 그리고 값은 리스트로도 있음
+
+*XML
+mark up language
+
+5)실습
+
+	use testdb
+	{키 : 값}
+	여러개의 데이터를 쓸 때는 [] 배열
+	db.createCollection("books", {capped:true,size:1000000,max:5000})
+	(입력예제)
+		db.books.insert([{"name":"book10","author":"홍길동","price":10000},
+	{"name":"book11","author":"홍길동","price":10000},
+	{"name":"book12","author":"홍길동","price":10000}])
+	db.books.find()
+	
+	db.books.insert({"name":"book6","author":"임꺽정","seller":["교보","영풍"]})
+	
+	//삭제
+	db.books.remove() // 전체 데이터 삭제
+	db.books.deleteOne({"name":"book1"}) //한개만삭제
+	db.books.deleteMany({"name":"book2"}) // 여러개삭제
+	db.books.remove({"name":"book3"}) // 여러개 삭제
+	db.books.remove({"author":"장비"})
+	db.books.remove({"_id" : Objectid(" ~~~ ")}) // 각자 아이디다름
+	
+	//조회
+	createcollection 안해도 그냥 조회하면 컬렉션명 자동으로 해서 만들어짐
+	db.articles.insert(
+		[
+		{
+			"title":"article01",
+			"content":"content01",
+			"writer":"Velopert",
+			"likes":0,
+			"comments":[]
+		},
+		{
+			"title":"article02",
+			"content":"content02",
+			"writer":"Alpha",
+			"likes":23,
+			"comments":[{"name":"Bravo","message":"Hey man!"}]
+		},
+		{
+			"title":"article03",
+			"content":"content03",
+			"writer":"Bravo",
+			"likes":40,
+			"comments":[{"name":"Charlie","message":"Hey man!"},
+						{"name":"Delta","message":"Hey man!"}]
+		}
+		]
+		)
+		
+	------------------------------------------
+	-Writer 값이 "Velopert"인 document조회
+		db.articles.find({"writer":"Velopert"})
+		db.articles.find({"writer":"Velopert"}).pretty()
+		
+	-likes값이 30이하인 document 조회  {$ lte: n} n이하 
+		db.articles.find({"likes":{$lte:30}}).pretty()
+		
+	-likes값이 10보다 크고 30보다 작은 document조회 { $ gt : n } n보다큰  { $ lt : n }
+		db.articles.find({$and:[{"likes":{$gt:10}},{"likes":{$lt:30}}]}).pretty()
+		
+		db.articles.find({"likes":{$gt:10, $lt:30}}).pretty()
+		
+	-writer 값이 "ALpha" 또는 "Bravo"인 document 조회
+	db.articles.find({"writer":{$in:["Alpha","Bravo"]}}).pretty()
+	
+	db.articles.find({$or:[{"writer":"Alpha"},{"writer":"Bravo"}]}).pretty()
+	
+	-writer 값이 "Bravo"이거나 likes값이 10미만인 document 조회
+	
+	db.articles.find({$or:[{"writer":"Bravo"},{"likes":{$lt:10}}]}).pretty()
+	
+	-Javascript 문법
+		commnet가 비어있는 documnet 조회하면
+		db.articles.find({$where: "this.commnets.length == 0"}).pretty()
+		
+	-$elemMatch
+		commnets 중에서 "Charlie"가 작성한 댓글이 있는 documnet 조회
+		db.articles.find({"comments":{$elemMatch:{"name":"Charlie"}}}).pretty()
+	
+	-sort(),limit(),skip()
+	(먼저 예제 컬렉션)
+	db.order.insert([
+{"_id":1, "item":{"category":"cake", "type":"chiffon"}, "amount":10},
+{"_id":2, "item":{"category":"cookies", "type":"chocolate chip"}, "amount":50},
+{"_id":3, "item":{"category":"cookies", "type":"chocolate chip"}, "amount":15},
+{"_id":4, "item":{"category":"cake", "type":"lemon"}, "amount":30},
+{"_id":5, "item":{"category":"cake", "type":"carrot"}, "amount":20},
+{"_id":6, "item":{"category":"brownies", "type":"blondie"}, "amount":10}
+])
+
+	-id를 이용해서 정렬 1은 오름차순 
+		db.order.find().sort({"_id":-1})
+		
+	//amount로 오름차순 정렬하고, 그결과 내에서 다시 id값으로 내림차순 정렬
+		db.order.find().sort({})
+		
+	//출력할 데이터 갯수를 제한하고자 할 때 
+		db.order.find()limit(3)
+		
+	//데이터를 원하는 갯수만큼 생략하고 출력
+		db.order.find().skip(2)
+		
+	//응용 : 게시판의 페이징 만들기 
+	- 1.페이징 
+		var showPage = function(page){
+			return db.order.find()
+			}
+			# showPage 컬렉션을 조회결과를 리턴해줌 
+			showPage(1)
+			showPage(2)
+			showPage(3)
+			
+			var showPage = function(page){
+			return db.order.find().sort({"_id":-1})
+			}
+			
+			var showPage = function(page){
+			return db.order.find().sort({"_id":-1}).skip((page-1)*2)
+			}
+			page 1 이면 0을 스킵함
+			page가 2이면 2페이지를 스킵함(2-1)*2
+			var showPage = function(page){
+			return db.order.find().sort({"_id":-1}).skip((page-1)*2).limit(2)
+			}
+			
+			(컬렉션 예제)
+			db.people.insert([
+{name:"Abet", age:19},
+{name:"Betty", age:20},
+{name:"Charlie", age:23, skills:["mongodb", "nodejs"]},
+{name:"David", age:23, score:20}
+])
+
+// Abet의 나이를 20살로 변경
+	db.people.update({name:"Abet"},{$set : {age:20}} ) //set을 하면 특정필드
+	db.people.update({name:"Abet"},{age:19}) // 해당내용다 없어지고 age:19만 셋팅됨
+	해당하는 도큐먼트를 age:19로 대채
+	db.people.update({_id:ObjectId("5ed0a38e51a59d92efd024b6")},
+	{name:"Abet",age:20})
+	
+//특정 필드 삭제: $unset -David의 score라는 field 삭제 1은 삭제허용 
+	db.people.update({name:"David"},{$unset:{score:1}})
+//특정 필드 추가 : $set 
+		db.people.update({name:"David"},{$set:{score:20}})	
+		//존재하지않는 document를 자동으로 입력{upsert:true}
+		db.people.update({name:"Elly"},{"name" :"Elly","age":20},{upsert:true} )
+		
+// 여러 document의 특정 field를 수정 
+		// age가 20보다 작거나 같은 document의 score를 10으로 변경
+		// update는 하나의 도큐먼트밖에 못함
+			db.people.update({"age":{$lte:20}},{$set:{score:10}})
+			
+			//다시 원래대로 Abet의 score 삭제
+			db.people.update({name:"Abet"},{$unset:{score:1}})
+		(정답)// multi : true  여러줄
+			db.people.update({"age":{$lte:20}},{$set:{score:10}},{multi:true})
+			
+// 배열에 값을 추가 : $push
+// charlie의 skills배열에 "python"추가
+	db.people.update({name:"Charle"},{$push:{"skills":"python"}})
+	//하나의 리스트가 들어감 이딴식으로 하면 안됨
+	db.people.update({name:"Charlie"},{$push:{"skills":["C","C++"]}})
+	(정답) $each: 속성 추가하여 배열앞에다가
+	db.people.update({name:"Charlie"},{$push:{"skills":{$each:["R","Java"]}}})
+
+//배열에 값을 삭제 : $pull
+	db.people.update({name:"Charlie"},{$pull:{"skills":["C","C++"]}})
+	in을 넣어서 배열을 분해 해야함 
+	db.people.update({name:"Charlie"},{$pull:{"skills":{$in:["R","Java"]}}})
